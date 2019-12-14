@@ -6,19 +6,11 @@ enum LCons {
 }
 
 impl LCons {
-    fn state(&self){
+    fn state(&self) -> String{
         match self {
-            LCons::Nil => println!("nil"),
-            LCons::Atom(_atom) => println!("atom"),
-            LCons::List(_list) => println!("list")
-        }
-    }
-
-    fn print_state(&self){
-        match self {
-            LCons::Nil => println!("nil"),
-            LCons::Atom(_atom) => println!("{}", _atom),
-            LCons::List(_list) => println!("list")
+            LCons::Nil => String::from("nil"),
+            LCons::Atom(_atom) => String::from(_atom),
+            LCons::List(_list) => String::from("list")
         }
     }
 
@@ -27,6 +19,7 @@ impl LCons {
             LCons::Nil => self.clone(),
             LCons::Atom(_atom) => self.clone(),
             LCons::List(_list) =>{
+                if _list.len() == 0 {return LCons::Nil};
                 *(_list[0].clone())
             }
         }
@@ -37,10 +30,14 @@ impl LCons {
             LCons::Nil => self.clone(),
             LCons::Atom(_atom) => self.clone(),
             LCons::List(_list) =>{
+                if _list.len() == 0 {return LCons::Nil};
                 let mut res = _list.clone();
                 res.remove(0);
-                let res = LCons::List(res);
-                res
+                if res.len() != 0{
+                    return LCons::List(res);
+                } else {
+                    return LCons::Nil;
+                };
             }
         }
     }
@@ -68,23 +65,24 @@ struct LEnv {
 
 fn main() {
     let nil = LCons::Nil;
+}
+
+#[test]
+fn car_cdr_test(){
     let test_list = LCons::List(vec![
         Box::new(LCons::Atom(String::from("Alice"))),
-        Box::new(LCons::Atom(String::from("Bell"))),
-        Box::new(LCons::Nil)
+        Box::new(LCons::Atom(String::from("Bell")))
     ]);
     let test_list = LCons::List(vec![
-        Box::new(test_list),
-        Box::new(LCons::Nil)
+        Box::new(test_list)
     ]);
-    let mut envi = LEnv{
-        list: vec![Box::new(LVal{
-            name: String::from("NIIIIL"),
-            val: Box::new(LCons::Nil)
-        })]
-    };
+    let empty_list = LCons::List(vec![]);
 
-    test_list.car().state();
-    test_list.car().car().print_state();
-    test_list.car().cdr().car().print_state();
+    assert_eq!(test_list.car().state(), String::from("list"));
+    assert_eq!(test_list.car().car().state(), String::from("Alice"));
+    assert_eq!(test_list.car().cdr().car().state(), String::from("Bell"));
+    assert_eq!(test_list.car().cdr().cdr().state(), String::from("nil"));
+    assert_eq!(empty_list.state(), String::from("list"));
+    assert_eq!(empty_list.car().state(), String::from("nil"));
+    assert_eq!(empty_list.cdr().state(), String::from("nil"));
 }
