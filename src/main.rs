@@ -1,52 +1,60 @@
 #[derive(Clone)]
 enum LCons {
     Nil,
-    Atom{car: String, cdr: Box<LCons>},
-    List{car: Box<LCons>, cdr: Box<LCons>}
+    Atom(String),
+    List(Vec<Box<LCons>>)
 }
 
 impl LCons {
-    // add code here
-    fn state_print(&self) {
+    fn state(&self){
         match self {
-            LCons::Nil => println!("Nil"),
-            LCons::Atom{car, cdr} => println!("Atom"),
-            LCons::List{car, cdr} => {
-                match **car {
-                    LCons::Nil => println!("Nil"),
-                    _ => println!("other")
-                };
-                match **cdr {
-                    LCons::Nil => println!("Nil"),
-                    _ => println!("other")
-                };
-            }
-        };
+            LCons::Nil => println!("nil"),
+            LCons::Atom(_atom) => println!("atom"),
+            LCons::List(_list) => println!("list")
+        }
     }
-}
 
-fn eval(exp :&LCons, env:&LEnv) -> LCons{
-    match exp {
-        LCons::Nil => exp.clone(),
-        LCons::Atom{car, cdr} => {
-            if *car == String::from(""){
+    fn print_state(&self){
+        match self {
+            LCons::Nil => println!("nil"),
+            LCons::Atom(_atom) => println!("{}", _atom),
+            LCons::List(_list) => println!("list")
+        }
+    }
 
-            };
-            LCons::Nil
-        },
-        LCons::List{car, cdr} =>{
-            let result = LCons::List{
-                car: Box::new(eval(&car, &env)),
-                cdr: Box::new(eval(&cdr, &env))
-            };
-            result
+    fn car (&self) -> LCons{
+        match self {
+            LCons::Nil => self.clone(),
+            LCons::Atom(_atom) => self.clone(),
+            LCons::List(_list) =>{
+                *(_list[0].clone())
+            }
+        }
+    }
+
+    fn cdr (&self) -> LCons{
+        match self {
+            LCons::Nil => self.clone(),
+            LCons::Atom(_atom) => self.clone(),
+            LCons::List(_list) =>{
+                let mut res = _list.clone();
+                res.remove(0);
+                let res = LCons::List(res);
+                res
+            }
         }
     }
 }
 
-fn eval_atom(_exp :&LCons, _env:&LEnv) -> LCons{
-
-    return LCons::Nil
+fn eval(exp :&LCons, env :&LEnv) -> LCons{
+    match exp {
+        LCons::Nil => exp.clone(),
+        LCons::Atom(_atom) => exp.clone(),
+        LCons::List(_list) =>{
+            let result = LCons::List(vec![]);
+            result
+        }
+    }
 }
 
 struct LVal {
@@ -60,13 +68,23 @@ struct LEnv {
 
 fn main() {
     let nil = LCons::Nil;
-    let envi = LEnv{
-        list: vec![]
+    let test_list = LCons::List(vec![
+        Box::new(LCons::Atom(String::from("Alice"))),
+        Box::new(LCons::Atom(String::from("Bell"))),
+        Box::new(LCons::Nil)
+    ]);
+    let test_list = LCons::List(vec![
+        Box::new(test_list),
+        Box::new(LCons::Nil)
+    ]);
+    let mut envi = LEnv{
+        list: vec![Box::new(LVal{
+            name: String::from("NIIIIL"),
+            val: Box::new(LCons::Nil)
+        })]
     };
 
-    let cop = eval(&nil, &envi);
-
-    eval(&nil, &envi).state_print();
-    nil.state_print();
-    cop.state_print();
+    test_list.car().state();
+    test_list.car().car().print_state();
+    test_list.car().cdr().car().print_state();
 }
