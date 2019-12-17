@@ -2,6 +2,7 @@
 enum LCons {
     Nil,
     Atom(String),
+    Error(String),
     List(Vec<Box<LCons>>)
 }
 
@@ -10,32 +11,40 @@ impl LCons {
         match self {
             LCons::Nil => String::from("nil"),
             LCons::Atom(_atom) => String::from("atom"),
-            LCons::List(_list) => String::from("list")
+            LCons::List(_list) => String::from("list"),
+            LCons::Error(_err) => String::from(_err)
         }
     }
 
     fn atom_string(&self) -> String{
         match self {
             LCons::Atom(_atom) => String::from(_atom),
+            LCons::Error(_err) => String::from(_err),
             _ => String::from("Not atom") 
         }
     }
 
     fn car (&self) -> LCons{
         match self {
-            LCons::Nil => self.clone(),
-            LCons::Atom(_atom) => self.clone(),
+            LCons::Nil => LCons::Nil,
+            LCons::Atom(_atom) => LCons::Nil,
             LCons::List(_list) =>{
                 if _list.len() == 0 {return LCons::Nil};
                 *(_list[0].clone())
+            },
+            LCons::Error(_err) => {
+                if *_err != String::from(""){
+                    println!("{}", _err)
+                }
+                LCons::Error(String::from(""))
             }
         }
     }
 
     fn cdr (&self) -> LCons{
         match self {
-            LCons::Nil => self.clone(),
-            LCons::Atom(_atom) => self.clone(),
+            LCons::Nil => LCons::Nil,
+            LCons::Atom(_atom) => LCons::Nil,
             LCons::List(_list) =>{
                 if _list.len() == 0 {return LCons::Nil};
                 let mut res = _list.clone();
@@ -45,6 +54,12 @@ impl LCons {
                 } else {
                     return LCons::Nil;
                 };
+            },
+            LCons::Error(_err) => {
+                if *_err != String::from(""){
+                    println!("{}", _err)
+                }
+                LCons::Error(String::from(""))
             }
         }
     }
@@ -52,11 +67,17 @@ impl LCons {
 
 fn eval(_exp :&LCons, _env :&LEnv) -> LCons{
     match _exp {
-        LCons::Nil => _exp.clone(),
+        LCons::Nil => LCons::Nil,
         LCons::Atom(_atom) => _exp.clone(),
         LCons::List(_list) =>{
             let result = LCons::List(vec![]);
             result
+        },
+        LCons::Error(_err) => {
+            if *_err != String::from(""){
+                println!("{}", _err)
+            }
+            LCons::Error(String::from(""))
         }
     }
 }
