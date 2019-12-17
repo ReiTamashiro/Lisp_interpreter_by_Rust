@@ -9,8 +9,15 @@ impl LCons {
     fn state(&self) -> String{
         match self {
             LCons::Nil => String::from("nil"),
-            LCons::Atom(_atom) => String::from(_atom),
+            LCons::Atom(_atom) => String::from("atom"),
             LCons::List(_list) => String::from("list")
+        }
+    }
+
+    fn atom_string(&self) -> String{
+        match self {
+            LCons::Atom(_atom) => String::from(_atom),
+            _ => String::from("Not atom") 
         }
     }
 
@@ -43,10 +50,10 @@ impl LCons {
     }
 }
 
-fn eval(exp :&LCons, env :&LEnv) -> LCons{
-    match exp {
-        LCons::Nil => exp.clone(),
-        LCons::Atom(_atom) => exp.clone(),
+fn eval(_exp :&LCons, _env :&LEnv) -> LCons{
+    match _exp {
+        LCons::Nil => _exp.clone(),
+        LCons::Atom(_atom) => _exp.clone(),
         LCons::List(_list) =>{
             let result = LCons::List(vec![]);
             result
@@ -79,8 +86,12 @@ fn car_cdr_test(){
     let empty_list = LCons::List(vec![]);
 
     assert_eq!(test_list.car().state(), String::from("list"));
-    assert_eq!(test_list.car().car().state(), String::from("Alice"));
-    assert_eq!(test_list.car().cdr().car().state(), String::from("Bell"));
+    assert_eq!(test_list.car().car().state(), String::from("atom"));
+    assert_eq!(test_list.car().cdr().car().state(), String::from("atom"));
+
+    assert_eq!(test_list.car().car().atom_string(), String::from("Alice"));
+    assert_eq!(test_list.car().cdr().car().atom_string(), String::from("Bell"));
+
     assert_eq!(test_list.car().cdr().cdr().state(), String::from("nil"));
     assert_eq!(empty_list.state(), String::from("list"));
     assert_eq!(empty_list.car().state(), String::from("nil"));
