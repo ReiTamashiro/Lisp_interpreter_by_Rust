@@ -87,9 +87,7 @@ struct LVal {
     val : Box<LCons>
 }
 
-struct LEnv {
-    list: Vec<Box<LVal>>
-}
+struct LEnv(Vec<Box<LVal>>);
 
 fn main() {
     let nil = LCons::Nil;
@@ -117,4 +115,21 @@ fn car_cdr_test(){
     assert_eq!(empty_list.state(), String::from("list"));
     assert_eq!(empty_list.car().state(), String::from("nil"));
     assert_eq!(empty_list.cdr().state(), String::from("nil"));
+}
+
+#[test]
+fn eval_atom(){
+    let atom = LCons::Atom(String::from("Wonderland"));
+    let result = atom.clone();
+    let input = LCons::Atom(String::from("Alice"));
+
+    let env = LEnv(
+        vec![Box::new(LVal{
+            name: String::from("Alice"),
+            val: Box::new(atom)
+        })]
+    );
+
+    assert_eq!(input.state(), String::from("Wonderland"));
+    assert_eq!(eval(&input, &env).atom_string(), result.atom_string());
 }
