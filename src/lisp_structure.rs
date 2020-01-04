@@ -1,4 +1,24 @@
 #[derive(Clone)]
+pub struct LVal {
+    name: String,
+    val : Box<LCons>
+}
+
+#[derive(Clone)]
+pub struct LEnv(Vec<Box<LVal>>);
+
+impl LEnv {
+    fn search (&self, name: String) -> LCons{
+        for item in &*self.0{
+            if item.name == name {
+                return *item.val.clone()
+            }
+        }
+        LCons::Error(String::from("Not Defined"))
+    }
+}
+
+#[derive(Clone)]
 pub enum LCons {
     Nil,
     Atom(String),
@@ -72,8 +92,22 @@ pub fn eval(_exp :&LCons, _env :&LEnv) -> LCons{
         LCons::List(_list) =>{
             if _list.len() == 0 {return LCons::Nil};
             let result = _list.clone();
-            match *result[0]{
-                LCons::Nil =>{},
+            match &*result[0]{
+                LCons::Nil =>{return _exp.cdr()},
+                LCons::Atom(_atom) => {
+                    if *_atom == String::from("quote"){
+                        //need argments count check
+                        return *result[1].clone();
+                    }
+                    else if *_atom == String::from("wq"){
+                        if _exp.cdr().car().state() != String::from("nil") {
+                            return eval(&_exp.cdr().cdr().car(), &_env)
+                        }
+                        else {
+                            return eval(&_exp.cdr().cdr().cdr().car(), &_env)
+                        }
+                    }
+                },
                 _ =>{}
             };
             let result = LCons::List(vec![]);
@@ -85,24 +119,6 @@ pub fn eval(_exp :&LCons, _env :&LEnv) -> LCons{
             }
             LCons::Error(String::from(""))
         }
-    }
-}
-
-pub struct LVal {
-    name: String,
-    val : Box<LCons>
-}
-
-pub struct LEnv(Vec<Box<LVal>>);
-
-impl LEnv {
-    fn search (&self, name: String) -> LCons{
-        for item in &*self.0{
-            if item.name == name {
-                return *item.val.clone()
-            }
-        }
-        LCons::Error(String::from("Not Defined"))
     }
 }
 
@@ -142,6 +158,14 @@ fn eval_atom(){
             val: Box::new(atom)
         })]
     );
+
+    let quote = LCons::List(vec![
+        Box::new(LCons::Atom(String::from("quote"))),
+        Box::new(input.clone())
+    ]);
     
     assert_eq!(eval(&input, &env).atom_string(), result.atom_string());
+    assert_eq!(eval(&input, &env).car().state(), result.car().state());
+    assert_eq!(eval(&quote, &env).atom_string(), input.atom_string());
+    assert_eq!(eval(&eval(&quote, &env), &env).atom_string(), result.atom_string());
 }
