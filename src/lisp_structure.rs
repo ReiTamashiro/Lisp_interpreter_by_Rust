@@ -166,9 +166,9 @@ fn car_cdr_test(){
 
 #[test]
 fn eval_atom(){
-    let atom = LCons::Atom(String::from("Alice"));
+    let atom = LCons::Atom(String::from("value"));
     let result = atom.clone();
-    let input = LCons::Atom(String::from("Wonderland"));
+    let input = LCons::Atom(String::from("name"));
 
     let env = LEnv(
         vec![Box::new(LVal{
@@ -182,13 +182,13 @@ fn eval_atom(){
         Box::new(input.clone())
     ]);
     
-    //(Wonderland)
+    //(name)
     assert_eq!(eval(&input, &env).atom_string(), result.atom_string());
-    //(checktype (car Wonderland))
+    //(checktype (car name))
     assert_eq!(eval(&input, &env).car().state(), result.car().state());
-    //(quote Wonderland)
+    //(quote name)
     assert_eq!(eval(&quote, &env).atom_string(), input.atom_string());
-    //(eval (quote Wonderland))
+    //(eval (quote name))
     assert_eq!(eval(&eval(&quote, &env), &env).atom_string(), result.atom_string());
 }
 
