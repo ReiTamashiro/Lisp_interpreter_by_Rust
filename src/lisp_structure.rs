@@ -4,6 +4,10 @@ pub struct LVal {
     val : Box<LCons>
 }
 
+trait Name {
+    // add code here
+}
+
 #[derive(Clone)]
 pub struct LEnv(Vec<Box<LVal>>);
 
@@ -36,11 +40,10 @@ impl LCons {
         }
     }
 
-    fn atom_string(&self) -> String{
+    fn atom_string(&self) -> Result<String, ()>{
         match self {
-            LCons::Atom(_atom) => String::from(_atom),
-            LCons::Error(_err) => String::from(_err),
-            _ => String::from("Not atom") 
+            LCons::Atom(_atom) => Ok(String::from(_atom)),
+            _ => Err(()) 
         }
     }
 
@@ -111,21 +114,21 @@ pub fn eval(_exp :&LCons, _env :&LEnv) -> LCons{
 
                     }
                 },
-                LCons::List(_list) =>{
-                    if _list.len() == 0 {return LCons::Nil};
-                    match &*_list[0]{
+                LCons::List(__list) =>{
+                    if __list.len() == 0 {return LCons::Nil};
+                    match &*__list[0]{
                         LCons::Atom(_atom) =>{
                             if *_atom == String::from("lambda"){
-                                let mut input = _list.clone();
+                                let mut input = __list.clone();
                                 let mut res = vec![Box::new(*input.remove(0)), Box::new(*input.remove(0))];
                                 res.append(&mut input);
                                 let res = LCons::List(res);
                                 return eval(&res, &_env);
                             }
+                            return LCons::Atom(String::from(_atom))
                         },
-                        _ =>{}
+                        _ =>{return eval(&_list[0], &_env)}
                     }
-                    return LCons::Nil
                 },
                 _ =>{}
             };
@@ -155,8 +158,8 @@ fn car_cdr_test(){
     assert_eq!(test_list.car().car().state(), String::from("atom"));
     assert_eq!(test_list.car().cdr().car().state(), String::from("atom"));
 
-    assert_eq!(test_list.car().car().atom_string(), String::from("Alice"));
-    assert_eq!(test_list.car().cdr().car().atom_string(), String::from("Bell"));
+    assert_eq!(test_list.car().car().atom_string().unwrap(), String::from("Alice"));
+    assert_eq!(test_list.car().cdr().car().atom_string().unwrap(), String::from("Bell"));
 
     assert_eq!(test_list.car().cdr().cdr().state(), String::from("nil"));
     assert_eq!(empty_list.state(), String::from("list"));
@@ -172,7 +175,7 @@ fn eval_atom(){
 
     let env = LEnv(
         vec![Box::new(LVal{
-            name: input.atom_string(),
+            name: input.atom_string().unwrap(),
             val: Box::new(atom)
         })]
     );
