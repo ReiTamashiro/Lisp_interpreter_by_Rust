@@ -4,10 +4,6 @@ pub struct LVal {
     val : Box<LCons>
 }
 
-trait Name {
-    // add code here
-}
-
 #[derive(Clone)]
 pub struct LEnv(Vec<Box<LVal>>);
 
@@ -18,7 +14,12 @@ impl LEnv {
                 return *item.val.clone()
             }
         }
-        LCons::Error(String::from("Not Defined"))
+        LCons::Atom(name)
+    }
+
+    fn add(&mut self, value: LVal){
+        let LEnv(envi) = self;
+        envi.push(Box::new(value.clone()));
     }
 }
 
@@ -40,10 +41,20 @@ impl LCons {
         }
     }
 
-    fn atom_string(&self) -> Result<String, ()>{
+    fn atom_string(&self) -> Result<String, String>{
         match self {
+            LCons::Nil => Ok(String::from("Nil")),
             LCons::Atom(_atom) => Ok(String::from(_atom)),
-            _ => Err(()) 
+            LCons::List(_list) => Err(String::from("List")),
+            LCons::Error(e) => Err(String::from(e))
+        }
+    }
+
+    fn is_list(&self) -> Result<Vec<Box<LCons>>, LCons>{
+        match &*self {
+            LCons::List(_list) => Ok((*_list).to_vec()),
+            LCons::Nil => Ok(vec![]),
+            _ => Err(self.clone())
         }
     }
 
@@ -88,30 +99,60 @@ impl LCons {
     }
 }
 
-pub fn eval(_exp :&LCons, _env :&LEnv) -> LCons{
+pub fn eval(_exp :&LCons, _env :&mut LEnv) -> LCons{
     match _exp {
         LCons::Nil => LCons::Nil,
         LCons::Atom(_atom) => _env.search(String::from(_atom)),
         LCons::List(_list) =>{
+            let tmp_env = &mut _env.clone();
             if _list.len() == 0 {return LCons::Nil};
-            let result = _list.clone();
-            match &*result[0]{
+            let exp = _list.clone();
+            match &*exp[0]{
                 LCons::Nil =>{return _exp.cdr()},
                 LCons::Atom(_atom) => {
                     if *_atom == String::from("quote"){
                         //need argments count check
-                        return *result[1].clone();
+                        return *exp[1].clone();
                     }
                     else if *_atom == String::from("if"){
-                        if eval(&_exp.cdr().car(), &_env).state() != String::from("nil") {
-                            return eval(&_exp.cdr().cdr().car(), &_env)
+                        if eval(&_exp.cdr().car(), tmp_env).state() != String::from("nil") {
+                            return eval(&_exp.cdr().cdr().car(), tmp_env)
                         }
                         else {
-                            return eval(&_exp.cdr().cdr().cdr().car(), &_env)
+                            return eval(&_exp.cdr().cdr().cdr().car(), tmp_env)
                         }
                     }
                     else if *_atom == String::from("lambda") {
+                            let _args = match exp[1].is_list() {
+                                Ok(_list) => _list,
+                                Err(e) => {return e}
+                            };
+                            let mut env = LEnv(vec![]);
+                            for (line, arg) in _args.iter().enumerate() {
+                                env.add(LVal{
+                                    name: arg.atom_string().unwrap(),
+                                    val: Box::new(*exp[line + 3].clone())
+                                });
+                            }
+                            let env = &mut env;
+                            return eval(&*exp[2].clone(), env)
 
+                    }
+                    else if *_atom == String::from("+") {
+                        return LCons::Atom((eval(&*exp[1], tmp_env).atom_string().unwrap().parse::<i32>().unwrap() + (eval(&*exp[2], tmp_env).atom_string().unwrap().parse::<i32>().unwrap())).to_string())
+                    }
+                    else {
+                        let mut input = exp.clone();
+                        input.remove(0);
+                        let mut after_conversion = vec![Box::new(_env.search(String::from(_atom)))];
+
+                        for args in input {
+                            after_conversion.push(args)
+                        }
+
+                        let after_conversion = LCons::List(after_conversion);
+
+                        return eval(&after_conversion, tmp_env);
                     }
                 },
                 LCons::List(__list) =>{
@@ -119,15 +160,24 @@ pub fn eval(_exp :&LCons, _env :&LEnv) -> LCons{
                     match &*__list[0]{
                         LCons::Atom(_atom) =>{
                             if *_atom == String::from("lambda"){
-                                let mut input = __list.clone();
-                                let mut res = vec![Box::new(*input.remove(0)), Box::new(*input.remove(0))];
-                                res.append(&mut input);
+                                let mut input = _list.clone();
+                                input.remove(0);
+                                let mut define = __list.clone();
+                                let mut res = vec![Box::new(*define.remove(0)), Box::new(*define.remove(0)), Box::new(*define.remove(0))];
+                                
+                                for args in input {
+                                    res.push(args)
+                                }
+
+                                let res = res;
+
                                 let res = LCons::List(res);
-                                return eval(&res, &_env);
+
+                                return eval(&res, tmp_env);
                             }
                             return LCons::Atom(String::from(_atom))
                         },
-                        _ =>{return eval(&_list[0], &_env)}
+                        _ =>{return eval(&_list[0], tmp_env)}
                     }
                 },
                 _ =>{}
@@ -173,7 +223,7 @@ fn eval_atom(){
     let result = atom.clone();
     let input = LCons::Atom(String::from("name"));
 
-    let env = LEnv(
+    let env = &mut LEnv(
         vec![Box::new(LVal{
             name: input.atom_string().unwrap(),
             val: Box::new(atom)
@@ -186,40 +236,59 @@ fn eval_atom(){
     ]);
     
     //(name)
-    assert_eq!(eval(&input, &env).atom_string(), result.atom_string());
+    assert_eq!(eval(&input, env).atom_string(), result.atom_string());
     //(checktype (car name))
-    assert_eq!(eval(&input, &env).car().state(), result.car().state());
+    assert_eq!(eval(&input, env).car().state(), result.car().state());
     //(quote name)
-    assert_eq!(eval(&quote, &env).atom_string(), input.atom_string());
+    assert_eq!(eval(&quote, env).atom_string(), input.atom_string());
     //(eval (quote name))
-    assert_eq!(eval(&eval(&quote, &env), &env).atom_string(), result.atom_string());
+    assert_eq!(eval(&eval(&quote, env), env).atom_string(), result.atom_string());
+}
+
+#[test]
+fn plus_fun(){
+    let dummy = LCons::List(vec![
+        Box::new(LCons::Atom(String::from("+"))),
+        Box::new(LCons::Atom(String::from("1"))),
+        Box::new(LCons::Atom(String::from("2")))
+    ]);
+
+    let env = &mut LEnv(vec![]);
+
+    assert_eq!(eval(&dummy, env).atom_string().unwrap(), String::from("3"));
 }
 
 #[test]
 fn deproyment_lambda(){
     let dummy_args = LCons::List(vec![
         Box::new(LCons::Atom(String::from("x"))),
-        Box::new(LCons::Atom(String::from("y"))),
-        Box::new(LCons::Atom(String::from("z")))
+        Box::new(LCons::Atom(String::from("y")))
+    ]);
+    let dummy_fn = LCons::List(vec![
+        Box::new(LCons::Atom(String::from("+"))),
+        Box::new(LCons::Atom(String::from("x"))),
+        Box::new(LCons::Atom(String::from("y")))
     ]);
     let lam = LCons::Atom(String::from("lambda"));
     let lam = LCons::List(vec![
         Box::new(lam),
-        Box::new(dummy_args)
+        Box::new(dummy_args),
+        Box::new(dummy_fn)
     ]);
     let dummy = LCons::List(vec![
-        Box::new(lam.clone())
+        Box::new(LCons::Atom(String::from("Fn"))),
+        Box::new(LCons::Atom(String::from("1"))),
+        Box::new(LCons::Atom(String::from("2")))
     ]);
-    let dummy_fn = LCons::Atom(String::from("Fn"));
 
-    let env = LEnv(
+    let env = &mut LEnv(
         vec![Box::new(LVal{
             name: String::from("Fn"),
             val: Box::new(lam.clone())
         })]
     );
 
-    assert_eq!(eval(&dummy, &env).state(), lam.state());
-    assert_eq!(eval(&dummy, &env).car().atom_string(), lam.car().atom_string());
-    assert_eq!(eval(&dummy_fn, &env).car().atom_string(), lam.car().atom_string());
+    println!("{}", eval(&dummy, env).atom_string().unwrap());
+
+    //assert_eq!(eval(&dummy, env).atom_string().unwrap(), String::from("3"));
 }
