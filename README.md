@@ -1,2 +1,2 @@
 # Lisp
-learning GitHub system
+learning GitHub system & Rust
