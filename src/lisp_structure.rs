@@ -117,6 +117,12 @@ pub fn eval(_exp :&LCons, _env :&mut LEnv) -> LCons{
                         //need argments count check
                         return *exp[1].clone();
                     }
+                    else if *_atom == String::from("let"){
+                        return LCons::Nil
+                    }
+                    else if *_atom == String::from("cond"){
+                        return LCons::Nil
+                    }
                     else if *_atom == String::from("if"){
                         if eval(&_exp.cdr().car(), tmp_env).state() != String::from("nil") {
                             return eval(&_exp.cdr().cdr().car(), tmp_env)
@@ -147,24 +153,18 @@ pub fn eval(_exp :&LCons, _env :&mut LEnv) -> LCons{
                     else {
                         let mut input = exp.clone();
                         input.remove(0);
-                        let mut after_conversion = match _env.search(String::from(_atom)) {
-                            Ok(_ret) => vec![Box::new(_ret)],
-                            Err(()) => vec![]
-                        };
-
-                        for args in input {
-                            after_conversion.push(Box::new(eval(&*args, tmp_env)))
-                        }
-
-                        if exp.len() == after_conversion.len(){
-                            let after_conversion = LCons::List(after_conversion);
-                            return eval(&after_conversion, tmp_env)
-                        }
-
-                        let after_conversion = LCons::List(after_conversion);
-                        return after_conversion
-
-                        
+                        match _env.search(String::from(_atom)) {
+                            Ok(_ret) => {
+                                let mut after_conversion = vec![Box::new(_ret)];
+                                for args in input {
+                                    after_conversion.push(args)
+                                }
+                                return eval(&LCons::List(after_conversion), tmp_env)
+                            },
+                            Err(()) => {
+                                return LCons::Error(String::from("Illegal function call"))
+                            }
+                        };                       
                     }
                 },
                 LCons::List(__list) =>{
@@ -192,15 +192,19 @@ pub fn eval(_exp :&LCons, _env :&mut LEnv) -> LCons{
                         _ =>{return eval(&_list[0], tmp_env)}
                     }
                 },
-                _ =>{}
+                LCons::Error(_err) => {
+                    if *_err != String::from(""){
+                        println!("{}", _err)
+                    }
+                    return LCons::Error(String::from(""))
+                }
             };
-            LCons::Nil
         },
         LCons::Error(_err) => {
             if *_err != String::from(""){
                 println!("{}", _err)
             }
-            LCons::Error(String::from(""))
+            return LCons::Error(String::from(""))
         }
     }
 }
