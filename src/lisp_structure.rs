@@ -8,13 +8,13 @@ pub struct LVal {
 pub struct LEnv(Vec<Box<LVal>>);
 
 impl LEnv {
-    fn search (&self, name: String) -> LCons{
+    fn search (&self, name: String) -> Result<LCons, ()>{
         for item in &*self.0{
             if item.name == name {
-                return *item.val.clone()
+                return Ok(*item.val.clone())
             }
         }
-        LCons::Atom(name)
+        Err(())
     }
 
     fn add(&mut self, value: LVal){
@@ -102,7 +102,10 @@ impl LCons {
 pub fn eval(_exp :&LCons, _env :&mut LEnv) -> LCons{
     match _exp {
         LCons::Nil => LCons::Nil,
-        LCons::Atom(_atom) => _env.search(String::from(_atom)),
+        LCons::Atom(_atom) => match _env.search(String::from(_atom)) {
+            Ok(_ret) => _ret,
+            Err(()) => _exp.clone()
+        },
         LCons::List(_list) =>{
             let tmp_env = &mut _env.clone();
             if _list.len() == 0 {return LCons::Nil};
@@ -144,15 +147,24 @@ pub fn eval(_exp :&LCons, _env :&mut LEnv) -> LCons{
                     else {
                         let mut input = exp.clone();
                         input.remove(0);
-                        let mut after_conversion = vec![Box::new(_env.search(String::from(_atom)))];
+                        let mut after_conversion = match _env.search(String::from(_atom)) {
+                            Ok(_ret) => vec![Box::new(_ret)],
+                            Err(()) => vec![]
+                        };
 
                         for args in input {
-                            after_conversion.push(args)
+                            after_conversion.push(Box::new(eval(&*args, tmp_env)))
+                        }
+
+                        if exp.len() == after_conversion.len(){
+                            let after_conversion = LCons::List(after_conversion);
+                            return eval(&after_conversion, tmp_env)
                         }
 
                         let after_conversion = LCons::List(after_conversion);
+                        return after_conversion
 
-                        return eval(&after_conversion, tmp_env);
+                        
                     }
                 },
                 LCons::List(__list) =>{
@@ -288,7 +300,7 @@ fn deproyment_lambda(){
         })]
     );
 
-    println!("{}", eval(&dummy, env).atom_string().unwrap());
-
-    //assert_eq!(eval(&dummy, env).atom_string().unwrap(), String::from("3"));
+    //(define Fn (quote (lambda (x y) (+ x y))))
+    //(Fn 1 2)
+    assert_eq!(eval(&dummy, env).atom_string().unwrap(), String::from("3"));
 }
