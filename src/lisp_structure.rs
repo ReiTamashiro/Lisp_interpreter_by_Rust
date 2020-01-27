@@ -118,6 +118,10 @@ pub fn eval(_exp :&LCons, _env :&mut LEnv) -> LCons{
                         return *exp[1].clone();
                     }
                     else if *_atom == String::from("let"){
+                        _env.add(LVal{
+                            name: exp[1].atom_string().unwrap(),
+                            val: Box::new(eval(&exp[2], tmp_env))
+                        });
                         return LCons::Nil
                     }
                     else if *_atom == String::from("cond"){
@@ -304,7 +308,23 @@ fn deproyment_lambda(){
         })]
     );
 
-    //(define Fn (quote (lambda (x y) (+ x y))))
+    //(let Fn (quote (lambda (x y) (+ x y))))
     //(Fn 1 2)
     assert_eq!(eval(&dummy, env).atom_string().unwrap(), String::from("3"));
+}
+
+#[test]
+fn test_let(){
+    let dummy = LCons::List(vec![
+        Box::new(LCons::Atom(String::from("let"))),
+        Box::new(LCons::Atom(String::from("dummy"))),
+        Box::new(LCons::Atom(String::from("2")))
+    ]);
+    let env = &mut LEnv(vec![]);
+    let test_dummy = LCons::Atom(String::from("dummy"));
+
+    //(let dummy 2)
+    //(dummy)
+    assert_eq!(eval(&dummy, env).atom_string().unwrap(), String::from("Nil"));
+    assert_eq!(eval(&test_dummy, env).atom_string().unwrap(), String::from("2"));
 }
