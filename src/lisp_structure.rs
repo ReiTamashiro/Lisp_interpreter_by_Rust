@@ -152,7 +152,10 @@ pub fn eval(_exp :&LCons, _env :&mut LEnv) -> LCons{
 
                     }
                     else if *_atom == String::from("+") {
-                        return LCons::Atom((eval(&*exp[1], tmp_env).atom_string().unwrap().parse::<i32>().unwrap() + (eval(&*exp[2], tmp_env).atom_string().unwrap().parse::<i32>().unwrap())).to_string())
+                        let right = eval(&*exp[1], tmp_env).atom_string().unwrap().parse::<i32>().unwrap();
+                        let left = eval(&*exp[2], tmp_env).atom_string().unwrap().parse::<i32>().unwrap();
+                        let result = (right + left).to_string();
+                        return LCons::Atom(result)
                     }
                     else {
                         let mut input = exp.clone();
